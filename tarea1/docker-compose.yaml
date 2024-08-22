@@ -1,0 +1,56 @@
+version: "3"
+
+networks:
+  loki:
+    name: loki
+
+services:
+  service01:
+    container_name: service-01-app
+    image: service-01
+    labels:
+      logging: "promtail"
+      logging_jobname: "containerlogs"
+    ports:
+      - 8000:80
+    networks:
+      - loki
+
+  service02:
+    container_name: service-02-app
+    image: service-02
+    labels:
+      logging: "promtail"
+      logging_jobname: "containerlogs"
+    ports:
+      - 8001:80
+    networks:
+      - loki
+  loki:
+    image: grafana/loki:2.9.2
+    ports:
+      - "3100:3100"
+    command: -config.file=/etc/loki/local-config.yaml
+    networks:
+      - loki
+
+  promtail:
+    image: grafana/promtail:2.9.2
+    volumes:
+      - /var/log:/var/log
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: -config.file=/etc/promtail/config.yml
+    networks:
+      - loki
+
+  grafana:
+    environment:
+      - GF_PATHS_PROVISIONING=/etc/grafana/provisioning
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    networks:
+      - loki
